@@ -1,0 +1,6 @@
+.PHONY: build/plugin
+build/plugin:
+	go build -o ./plugin/plugin ./plugin/...
+
+build: build/plugin
+	go build -o ./client/client ./client/...
