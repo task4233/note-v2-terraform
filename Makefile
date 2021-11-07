@@ -54,4 +54,8 @@ clean:
 	rm -rf .terraform.lock.hcl terraform.tfstate*
 
 up: install clean init plan
+	echo "invoke to create"
+	terraform apply --auto-approve
+	echo "invoke to read"
+	terraform apply --auto-approve
 	echo "done"

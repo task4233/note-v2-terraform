@@ -1,6 +1,7 @@
 package client
 
 type Order struct {
+	ID    string      `json:"id"`
 	Items []OrderItem `json:"items"`
 }
 

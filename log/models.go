@@ -3,7 +3,8 @@ package log
 import "github.com/hashicorp/terraform-plugin-framework/types"
 
 type Order struct {
-	Items []OrderItem `tfsdk:"items"`
+	ID    types.String `tfsdk:"id"`
+	Items []OrderItem  `tfsdk:"items"`
 }
 
 type OrderItem struct {
