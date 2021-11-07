@@ -1,7 +1,8 @@
 package client
 
 type Order struct {
-	ID    string      `json:"id"`
+	// commented out because this field is not used for now
+	// ID    string      `json:"id"`
 	Items []OrderItem `json:"items"`
 }
 

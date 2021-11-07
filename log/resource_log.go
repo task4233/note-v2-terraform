@@ -16,10 +16,11 @@ type resourceLogType struct{}
 func (r resourceLogType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
-			"id": {
+			// commented out because this field is not used for now
+			/*"id": {
 				Type:     types.StringType,
 				Computed: true,
-			},
+			},*/
 			"items": {
 				Required: true,
 				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
