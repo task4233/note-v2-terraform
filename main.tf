@@ -29,14 +29,12 @@ provider "log" {
   host = "http://localhost:19090"
 }
 
-resource "log_order" "hogefuga" {
-  log = {
-    body = "test"
-  }
+resource "log_order" "item" {
+  body = "1"
 }
 
 output "test_order" {
-  value = log_order.hogefuga
+  value = log_order.item
 }
 
 # provider "google" {

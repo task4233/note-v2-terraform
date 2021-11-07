@@ -16,14 +16,9 @@ type resourceLogType struct{}
 func (r resourceLogType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
-			"log": {
+			"body": {
+				Type:     types.StringType,
 				Required: true,
-				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-					"body": {
-						Type:     types.StringType,
-						Required: true,
-					},
-				}),
 			},
 		},
 	}, nil
@@ -40,12 +35,6 @@ func (r resourceLogType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk
 }
 
 func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
-	f, err := os.Open("~/test")
-	if err != nil {
-		return
-	}
-	defer f.Close()
-
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
@@ -54,10 +43,8 @@ func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 		return
 	}
 
-	f.Write([]byte("0"))
-
 	// Retrieve values from plan
-	var plan Log
+	var plan OrderLog
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -72,16 +59,10 @@ func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 		return
 	}
 
-	f.Write([]byte("1"))
-
-	// Generate API request body from plan
+	// // Generate API request body from plan
 	log := client.OrderLog{
-		Log: client.Log{
-			Body: plan.Body.Value,
-		},
+		Body: plan.Body.Value,
 	}
-
-	f.Write([]byte("2"))
 
 	gotLog, err := r.p.client.CreateLog(ctx, &log)
 	if err != nil {
@@ -91,19 +72,11 @@ func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 		)
 	}
 
-	f.Write([]byte("3"))
-
 	result := OrderLog{
-		Log: Log{
-			types.String{
-				Unknown: false,
-				Null:    false,
-				Value:   gotLog.Body,
-			},
+		Body: types.String{
+			Value: gotLog.Body,
 		},
 	}
-
-	f.Write([]byte("4"))
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)

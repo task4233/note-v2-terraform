@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -54,12 +55,13 @@ func (s *Server) Post(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	fmt.Println("log: ", log)
 
 	s.mu.Lock()
 	s.logs = append(s.logs, &log)
 	s.mu.Unlock()
 
-	resp, err := json.Marshal(s.logs)
+	resp, err := json.Marshal(s.logs[0])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
