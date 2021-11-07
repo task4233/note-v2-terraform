@@ -2,6 +2,14 @@ package log
 
 import "github.com/hashicorp/terraform-plugin-framework/types"
 
-type OrderLog struct {
+type Order struct {
+	Items []OrderItem `tfsdk:"items"`
+}
+
+type OrderItem struct {
+	Log Log `tfsdk:"log"`
+}
+
+type Log struct {
 	Body types.String `tfsdk:"body"`
 }

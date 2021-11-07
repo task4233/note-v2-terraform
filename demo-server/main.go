@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/task4233/note-v2-terraform/client"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 
 type Server struct {
 	handler http.Handler
-	logs    []*Log
+	logs    []*client.Log
 	mu      sync.Mutex
 }
 
@@ -34,10 +35,6 @@ func (s *Server) init() {
 	s.mu = sync.Mutex{}
 }
 
-type Log struct {
-	Body string `json:"body"`
-}
-
 func (s *Server) Get(w http.ResponseWriter, r *http.Request) {
 	resp, err := json.Marshal(s.logs)
 	if err != nil {
@@ -50,7 +47,7 @@ func (s *Server) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Post(w http.ResponseWriter, r *http.Request) {
-	var log Log
+	var log client.Order
 	if err := json.NewDecoder(r.Body).Decode(&log); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -58,14 +55,31 @@ func (s *Server) Post(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("log: ", log)
 
 	s.mu.Lock()
-	s.logs = append(s.logs, &log)
+	for idx := range log.Items {
+		s.logs = append(s.logs, &log.Items[idx].Log)
+	}
+
+	logs := make([]client.OrderItem, len(s.logs))
+	for idx := range s.logs {
+		logs[idx] = client.OrderItem{
+			Log: client.Log{
+				Body: s.logs[idx].Body,
+			},
+		}
+	}
 	s.mu.Unlock()
 
-	resp, err := json.Marshal(s.logs[0])
+	result := client.Order{
+		Items: logs,
+	}
+
+	resp, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	fmt.Println("resp: ", string(resp))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(resp)
@@ -77,7 +91,7 @@ func (s *Server) Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var log Log
+	var log client.Log
 	if err := json.NewDecoder(r.Body).Decode(&log); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

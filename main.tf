@@ -30,11 +30,18 @@ provider "log" {
 }
 
 resource "log_order" "item" {
-  body = "1"
-}
-
-output "test_order" {
-  value = log_order.item
+  items = [
+    {
+      log = {
+        body = "hoge"
+      }
+    },
+    {
+      log = {
+        body = "fuga"
+      }
+    },
+  ]
 }
 
 # provider "google" {

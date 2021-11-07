@@ -51,7 +51,7 @@ install: build
 
 .PHONY: clean
 clean:
-	rm .terraform.lock.hcl
+	rm -rf .terraform.lock.hcl terraform.tfstate*
 
 up: install clean init plan
 	echo "done"

@@ -16,9 +16,19 @@ type resourceLogType struct{}
 func (r resourceLogType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
-			"body": {
-				Type:     types.StringType,
+			"items": {
 				Required: true,
+				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
+					"log": {
+						Required: true,
+						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+							"body": {
+								Type:     types.StringType,
+								Computed: true,
+							},
+						}),
+					},
+				}, tfsdk.ListNestedAttributesOptions{}),
 			},
 		},
 	}, nil
@@ -35,6 +45,7 @@ func (r resourceLogType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk
 }
 
 func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	// create前のStateと後のStateを一緒にしないとバグる
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
@@ -44,27 +55,34 @@ func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 	}
 
 	// Retrieve values from plan
-	var plan OrderLog
+	var plan Order
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if plan.Body.Null || plan.Body.Unknown {
-		resp.Diagnostics.AddError(
-			"Plan is not corrent value",
-			"body must not be null or unknown",
-		)
-		return
+	items := make([]client.OrderItem, len(plan.Items))
+	{
+		idx := 0
+		for _, item := range plan.Items {
+			if item.Log.Body.Null || item.Log.Body.Unknown {
+				continue
+			}
+			items[idx] = client.OrderItem{
+				Log: client.Log{
+					Body: item.Log.Body.Value,
+				},
+			}
+			idx++
+		}
 	}
 
-	// // Generate API request body from plan
-	log := client.OrderLog{
-		Body: plan.Body.Value,
+	log := client.Order{
+		Items: items,
 	}
 
-	gotLog, err := r.p.client.CreateLog(ctx, &log)
+	gotLogs, err := r.p.client.CreateLog(ctx, &log)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating log",
@@ -72,10 +90,19 @@ func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 		)
 	}
 
-	result := OrderLog{
-		Body: types.String{
-			Value: gotLog.Body,
-		},
+	gotItems := make([]OrderItem, len(gotLogs.Items))
+	for idx, item := range gotLogs.Items {
+		gotItems[idx] = OrderItem{
+			Log: Log{
+				Body: types.String{
+					Value: item.Log.Body,
+				},
+			},
+		}
+	}
+
+	result := Order{
+		Items: gotItems,
 	}
 
 	diags = resp.State.Set(ctx, result)

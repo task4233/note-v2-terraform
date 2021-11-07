@@ -5,6 +5,6 @@ provider "terraform.local/local/log" {
   version     = "0.1.0"
   constraints = "0.1.0"
   hashes = [
-    "h1:oF0wQ/O7RTs1sFsX7sKXRmecbTdhLscS376f7ht1JmI=",
+    "h1:55j1A7AkaxwhpYFaUi/qD1Lgo+QfE4QUiVnOq280CAM=",
   ]
 }

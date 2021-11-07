@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (c *Client) GetLog(ctx context.Context) (*OrderLog, error) {
+func (c *Client) GetLog(ctx context.Context) (*Order, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/", c.HostURL), nil)
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func (c *Client) GetLog(ctx context.Context) (*OrderLog, error) {
 		return nil, err
 	}
 
-	log := OrderLog{}
+	log := Order{}
 	if err := json.Unmarshal(body, &log); err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (c *Client) GetLog(ctx context.Context) (*OrderLog, error) {
 	return &log, nil
 }
 
-func (c *Client) CreateLog(ctx context.Context, logReq *OrderLog) (*OrderLog, error) {
+func (c *Client) CreateLog(ctx context.Context, logReq *Order) (*Order, error) {
 	rb, err := json.Marshal(logReq)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (c *Client) CreateLog(ctx context.Context, logReq *OrderLog) (*OrderLog, er
 		return nil, err
 	}
 
-	log := OrderLog{}
+	log := Order{}
 	if err := json.Unmarshal(body, &log); err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *Client) CreateLog(ctx context.Context, logReq *OrderLog) (*OrderLog, er
 	return &log, nil
 }
 
-func (c *Client) UpdateLog(ctx context.Context, logReq *OrderLog) (*OrderLog, error) {
+func (c *Client) UpdateLog(ctx context.Context, logReq *Order) (*Order, error) {
 	rb, err := json.Marshal(logReq)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (c *Client) UpdateLog(ctx context.Context, logReq *OrderLog) (*OrderLog, er
 		return nil, err
 	}
 
-	log := OrderLog{}
+	log := Order{}
 	if err := json.Unmarshal(body, &log); err != nil {
 		return nil, err
 	}
