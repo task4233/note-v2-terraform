@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-func (c *Client) GetLog(ctx context.Context) (*Order, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/", c.HostURL), nil)
+func (c *Client) GetLogs(ctx context.Context) (*Order, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s", c.HostURL), nil)
 	if err != nil {
 		return nil, err
 	}

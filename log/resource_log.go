@@ -16,6 +16,11 @@ type resourceLogType struct{}
 func (r resourceLogType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
+			// commented out because this field is not used for now
+			/*"id": {
+				Type:     types.StringType,
+				Computed: true,
+			},*/
 			"items": {
 				Required: true,
 				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
@@ -110,11 +115,39 @@ func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	fmt.Fprintf(os.Stderr, "[Create]\n")
 }
 
-func (r resourceLog) Read(context.Context, tfsdk.ReadResourceRequest, *tfsdk.ReadResourceResponse) {
+func (r resourceLog) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+	var state Order
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+
+	// orderID := state.ID.Value
+	order, err := r.p.client.GetLogs(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed reading order",
+			fmt.Sprintf("Failed client.GetLog: %s", err.Error()),
+		)
+	}
+
+	state.Items = []OrderItem{}
+	for _, item := range order.Items {
+		state.Items = append(state.Items, OrderItem{
+			Log: Log{
+				Body: types.String{
+					Value: item.Log.Body,
+				},
+			},
+		})
+	}
+
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	fmt.Fprintf(os.Stderr, "[Read]\n")
 }
 

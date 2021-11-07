@@ -3,6 +3,8 @@ package log
 import "github.com/hashicorp/terraform-plugin-framework/types"
 
 type Order struct {
+	// commented out because this field is not used for now
+	// ID    types.String `tfsdk:"id"`
 	Items []OrderItem `tfsdk:"items"`
 }
 
