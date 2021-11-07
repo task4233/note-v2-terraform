@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -16,11 +17,10 @@ type resourceLogType struct{}
 func (r resourceLogType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
-			// commented out because this field is not used for now
-			/*"id": {
+			"id": {
 				Type:     types.StringType,
 				Computed: true,
-			},*/
+			},
 			"items": {
 				Required: true,
 				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
@@ -29,11 +29,15 @@ func (r resourceLogType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagno
 						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 							"body": {
 								Type:     types.StringType,
-								Computed: true,
+								Required: true,
 							},
 						}),
 					},
 				}, tfsdk.ListNestedAttributesOptions{}),
+			},
+			"last_updated": {
+				Type:     types.StringType,
+				Computed: true,
 			},
 		},
 	}, nil
@@ -107,7 +111,9 @@ func (r resourceLog) Create(ctx context.Context, req tfsdk.CreateResourceRequest
 	}
 
 	result := Order{
-		Items: gotItems,
+		ID:          types.String{Value: "0"}, // set 0 for now
+		Items:       gotItems,
+		LastUpdated: types.String{Value: string(time.Now().Format(time.RFC850))},
 	}
 
 	diags = resp.State.Set(ctx, result)
@@ -151,7 +157,65 @@ func (r resourceLog) Read(ctx context.Context, req tfsdk.ReadResourceRequest, re
 	fmt.Fprintf(os.Stderr, "[Read]\n")
 }
 
-func (r resourceLog) Update(context.Context, tfsdk.UpdateResourceRequest, *tfsdk.UpdateResourceResponse) {
+func (r resourceLog) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+	var plan Order
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state Order
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	items := make([]client.OrderItem, len(plan.Items))
+	for idx := range plan.Items {
+		items[idx] = client.OrderItem{
+			Log: client.Log{
+				Body: plan.Items[idx].Log.Body.Value,
+			},
+		}
+	}
+
+	orderID := state.ID.Value
+	order, err := r.p.client.UpdateLog(ctx, orderID, &client.Order{
+		Items: items,
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error update order",
+			fmt.Sprintf("Could not update: %s", err.Error()),
+		)
+		return
+	}
+
+	lis := make([]OrderItem, len(order.Items))
+	for idx := range order.Items {
+		lis[idx] = OrderItem{
+			Log: Log{
+				Body: types.String{
+					Value: order.Items[idx].Log.Body,
+				},
+			},
+		}
+	}
+
+	var result = Order{
+		ID:          types.String{Value: orderID},
+		Items:       lis,
+		LastUpdated: types.String{Value: string(time.Now().Format(time.RFC850))},
+	}
+
+	diags = resp.State.Set(ctx, &result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	fmt.Fprintf(os.Stderr, "[Update]\n")
 }
 

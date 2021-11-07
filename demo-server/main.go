@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/go-chi/chi"
@@ -29,7 +30,7 @@ func (s *Server) init() {
 
 	r.Get("/", s.Get)
 	r.Post("/", s.Post)
-	r.Put("/", s.Put)
+	r.Put("/{orderID}", s.Put)
 	r.Delete("/", s.Delete)
 
 	s.handler = r
@@ -89,9 +90,13 @@ func (s *Server) Post(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.mu.Lock()
+	s.logs = []*client.Log{}
 	for idx := range log.Items {
-		s.logs = append(s.logs, &log.Items[idx].Log)
+		s.logs = append(s.logs, &client.Log{
+			Body: log.Items[idx].Log.Body},
+		)
 	}
+	s.mu.Unlock()
 
 	logs := make([]client.OrderItem, len(s.logs))
 	for idx := range s.logs {
@@ -101,7 +106,6 @@ func (s *Server) Post(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 	}
-	s.mu.Unlock()
 
 	result := client.Order{
 		Items: logs,
@@ -120,22 +124,54 @@ func (s *Server) Post(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Put(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(os.Stderr, "[Update] begins!\n")
+	orderID, err := strconv.Atoi(chi.URLParam(r, "orderID"))
+	if err != nil {
+		log.Printf("failed in Update: %s\n", err.Error())
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
 	if len(s.logs) == 0 {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// index out of range
+	if orderID > len(s.logs)-1 {
+		log.Println("invalid index in Update")
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
 
-	var log client.Log
+	var log client.Order
 	if err := json.NewDecoder(r.Body).Decode(&log); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	s.mu.Lock()
-	s.logs[0] = &log
+	s.logs = []*client.Log{}
+	for idx := range log.Items {
+		s.logs = append(s.logs, &client.Log{
+			Body: log.Items[idx].Log.Body},
+		)
+	}
 	s.mu.Unlock()
 
-	resp, err := json.Marshal(s.logs)
+	logs := make([]client.OrderItem, len(s.logs))
+	for idx := range s.logs {
+		logs[idx] = client.OrderItem{
+			Log: client.Log{
+				Body: s.logs[idx].Body,
+			},
+		}
+	}
+
+	result := client.Order{
+		Items: logs,
+	}
+
+	resp, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -153,9 +189,22 @@ func (s *Server) Delete(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.Lock()
 	s.logs = s.logs[:len(s.logs)-1]
+
+	logs := make([]client.OrderItem, len(s.logs))
+	for idx := range s.logs {
+		logs[idx] = client.OrderItem{
+			Log: client.Log{
+				Body: s.logs[idx].Body,
+			},
+		}
+	}
 	s.mu.Unlock()
 
-	resp, err := json.Marshal(s.logs)
+	result := client.Order{
+		Items: logs,
+	}
+
+	resp, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
