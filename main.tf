@@ -38,7 +38,7 @@ resource "log_order" "item" {
     },
     {
       log = {
-        body = "fuga"
+        body = "piyo"
       }
     },
   ]
